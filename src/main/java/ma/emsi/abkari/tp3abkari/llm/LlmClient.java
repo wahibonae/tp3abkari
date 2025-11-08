@@ -5,7 +5,11 @@ import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
+import dev.langchain4j.model.input.Prompt;
+import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.service.AiServices;
+
+import java.util.Map;
 
 public class LlmClient {
     private String key;
@@ -35,7 +39,7 @@ public class LlmClient {
     }
 
     public String envoyerRequete(String lieu, int nbreEndroits) {
-        String roleSysteme = String.format("""
+        /* String roleSysteme = String.format("""
                 Tu es un guide touristique expert.
                 Quand on te donne le nom d'une ville ou d'un pays, tu dois donner les %d principaux endroits à visiter
                 et le prix moyen d'un repas dans la devise du pays.
@@ -51,9 +55,29 @@ public class LlmClient {
                 
                 Le tableau "endroits_a_visiter" doit contenir exactement %d éléments.
                 Ne donne aucune explication, uniquement le JSON demandé.
-                """, nbreEndroits, nbreEndroits);
+                """, nbreEndroits, nbreEndroits);*/
+        PromptTemplate systemTemplate = PromptTemplate.from("""
+                Tu es un guide touristique expert.
+                Quand on te donne le nom d'une ville ou d'un pays, tu dois donner les {{nbreEndroits}} principaux endroits à visiter
+                et le prix moyen d'un repas dans la devise du pays.
+                
+                *N'utilise pas Markdown*
+                
+                Tu dois répondre uniquement avec un JSON qui a exactement ce format :
+                {
+                    "ville_ou_pays": "nom de la ville ou du pays",
+                    "endroits_a_visiter": ["endroit 1", "endroit 2"],
+                    "prix_moyen_repas": "<prix> <devise du pays>"
+                }
+                
+                Le tableau "endroits_a_visiter" doit contenir exactement {{nbreEndroits}} éléments.
+                Ne donne aucune explication, uniquement le JSON demandé.
+                """);
+        Prompt prompt = systemTemplate.apply(Map.of(
+                "nbreEndroits", nbreEndroits
+        ));
         chatMemory.clear();
-        chatMemory.add(SystemMessage.from(roleSysteme));
+        chatMemory.add(SystemMessage.from(prompt.text()));
         return guideTouristique.chat(lieu);
     }
 }
